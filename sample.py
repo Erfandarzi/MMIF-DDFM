@@ -10,9 +10,22 @@ import cv2
 import numpy as np
 from skimage.io import imsave
 import warnings
+from guided_diffusion.config_manager import ConfigManager
+
 warnings.filterwarnings('ignore')
 
-def image_read(path, mode='RGB'):
+
+def save_image_correctly(image_array, output_path):
+    """Ensure images are saved correctly by converting to uint8 if necessary."""
+    if image_array.dtype != np.uint8:
+        # Normalize and convert to uint8
+        image_array = 255 * ((image_array - image_array.min()) / (image_array.max() - image_array.min()))
+        image_array = image_array.astype(np.uint8)
+
+    # Save using skimage.io.imsave
+    imsave(output_path, image_array)
+
+def image_read(path, mode='GRAY'):
     img_BGR = cv2.imread(path).astype('float32')
     assert mode == 'RGB' or mode == 'GRAY' or mode == 'YCrCb', 'mode error'
     if mode == 'RGB':
@@ -35,9 +48,12 @@ if __name__ == '__main__':
     parser.add_argument('--model_config', type=str,default = 'configs/model_config_imagenet.yaml')
     parser.add_argument('--diffusion_config', type=str,default='configs/diffusion_config.yaml')                     
     parser.add_argument('--gpu', type=int, default=0)
+    parser.add_argument('--method', choices=['GEM', 'smooth'], required=True, help='Specify the method to use (GEM or smooth)')
     parser.add_argument('--save_dir', type=str, default='./output')
     args = parser.parse_args()
-   
+    config = ConfigManager.getInstance()
+    config.set_method(args.method)
+
     # logger
     logger = get_logger()
     
@@ -62,7 +78,8 @@ if __name__ == '__main__':
    
     # Working directory
     test_folder=r"input"     
-    out_path = args.save_dir
+    # Adjust output path based on the method
+    out_path = os.path.join(args.save_dir, args.method.lower())
     os.makedirs(out_path, exist_ok=True)
     for img_dir in ['recon', 'progress']:
         os.makedirs(os.path.join(out_path, img_dir), exist_ok=True)
@@ -100,5 +117,7 @@ if __name__ == '__main__':
         sample=cv2.cvtColor(sample,cv2.COLOR_RGB2YCrCb)[:,:,0]
         sample=(sample-np.min(sample))/(np.max(sample)-np.min(sample))
         sample=((sample)*255)
-        imsave(os.path.join(os.path.join(out_path, 'recon'), "{}.png".format(img_name.split(".")[0])),sample)
+        # imsave(os.path.join(os.path.join(out_path, 'recon'), "{}.jpeg".format(img_name.split(".")[0])),sample)
+        save_image_correctly(sample, os.path.join(os.path.join(out_path, 'recon'), f"{img_name.split('.')[0]}.jpeg"))
+
         i = i+1
