@@ -1,0 +1,4 @@
+# Ignore specific directories in the repository
+output/gem/
+input/
+models/

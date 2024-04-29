@@ -2,8 +2,6 @@ import importlib
 
 class ConfigManager:
     _instance = None
-    method = None
-
     @classmethod
     def getInstance(cls):
         if cls._instance is None:
@@ -11,25 +9,23 @@ class ConfigManager:
         return cls._instance
 
     def __init__(self):
-        if ConfigManager._instance is not None:
+        if self.__class__._instance is not None:
             raise Exception("This class is a singleton!")
-        else:
-            ConfigManager._instance = self
+        self.em_module = None
 
     def set_method(self, method):
-        self.method = method
-        print(method)
-        if method == 'GEM':
-            module_name = '.EM_onestep_GEM'
-        elif method == 'smooth':
-            module_name = '.EM_onestep_smooth'
-        else:
-            module_name = '.EM_onestep'  # Default or other cases
-
-        self.em_module = importlib.import_module(module_name, package='guided_diffusion')
+        print(f"Setting method: {method}")
+        try:
+            module_name = f'.EM_onestep_{method}' if method != 'default' else '.EM_onestep'
+            self.em_module = importlib.import_module(module_name, package='guided_diffusion')
+            print(f"Module loaded successfully: {module_name}")
+        except ImportError as e:
+            print(f"Failed to import the module for method {method}: {str(e)}")
+            raise ImportError(f"Failed to import the module for method {method}: {str(e)}")
 
     def get_EM_functions(self):
-        try:
+        if self.em_module and hasattr(self.em_module, 'EM_Initial') and hasattr(self.em_module, 'EM_onestep'):
             return self.em_module.EM_Initial, self.em_module.EM_onestep
-        except AttributeError:
-            raise Exception("The method has not been set or an invalid method was provided.")
+        else:
+            print("Failed to fetch EM functions.")
+        raise Exception("EM functions are not available, check method setup.")
