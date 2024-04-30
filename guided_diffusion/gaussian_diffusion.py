@@ -195,10 +195,7 @@ class GaussianDiffusion:
             
             img = img 
 
-            print("time",time)
-            print("I",I)
             # print ("HP",HP)
-            print("timesteps",self.num_timesteps)
             HP = EM_Initial(I) if time == torch.tensor([self.num_timesteps-1], device=device) else HP
            
             out, HP = self.p_sample(x=img, t=time, model=model, bfHP = HP, infrared = I, visible = V, lamb=lamb,rho=rho)
@@ -404,17 +401,13 @@ class DDIM(SpacedDiffusion):
         x_0_hat_y = torch.unsqueeze((x_0_hat_ycbcr[:,0,:,:]),1)
         assert x_0_hat_y.shape[1]==1
 
-        print("infrared",infrared.shape)
-        print("visible",visible.shape)
-        print("x_0_hat_y",x_0_hat_y.shape)
 
         x_0_hat_y_BF, bfHP = EM_onestep(f_pre = x_0_hat_y,
                                             I = infrared,
                                             V = visible,
                                             HyperP = bfHP,lamb=lamb,rho=rho)
 
-        print("x_0_hat_ycbcr",x_0_hat_ycbcr.shape)
-        print("x_0_hat_y_BF.shape",x_0_hat_y_BF.shape)
+
 
         x_0_hat_ycbcr[:,0,:,:] = x_0_hat_y_BF
         out['pred_xstart'] = ycbcr_to_rgb(x_0_hat_ycbcr*255)

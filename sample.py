@@ -179,6 +179,5 @@ if __name__ == '__main__':
             sample = (sample - np.min(sample)) / (np.max(sample) - np.min(sample)) * 255
             sample_image_path = os.path.join(out_path, 'recon', f"{patient_id}_{adc_name}")
             sample = sample.astype(np.uint8)
-
-            imsave(sample,sample_image_path)
+            imsave(sample_image_path,sample)
             i += 1
