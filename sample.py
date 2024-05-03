@@ -186,7 +186,9 @@ if __name__ == '__main__':
         zmap_images = load_and_process_images(vi_base_folder, patient_id, '_0001')
         patient_slices = []
 
-        
+        print(f"Processing patient {patient_id}, number of adc images: {len(adc_images)}, number of zmap images: {len(zmap_images)}")
+
+ 
         for (adc_img, adc_name), (zmap_img, zmap_name) in zip(adc_images, zmap_images):
             adc_tensor = torch.tensor(adc_img, dtype=torch.float32).unsqueeze(0).to(device)  # Ensure it's 4D
             zmap_tensor = torch.tensor(zmap_img, dtype=torch.float32).unsqueeze(0).to(device)  # Ensure it's 4D
@@ -199,12 +201,16 @@ if __name__ == '__main__':
 
             sample = sample.cpu().squeeze().numpy()  # Ensure it's 2D
             patient_slices.append(sample)
+            print(f"Appending slice for patient {patient_id}, current slice count: {len(patient_slices) + 1}")
 
         # Convert list of slices into a 3D numpy array
         patient_volume = np.stack(patient_slices, axis=0)
-        
+        patient_volume = patient_volume[:, 0, :, :]  # Select the first modality, now shape is (55, 128, 128)
+        patient_volume = patient_volume.transpose(1, 2, 0)  # Now shape should be (128, 128, 55)
+
         # Create a new NIfTI image from this array
         new_img = nib.Nifti1Image(patient_volume, affine=np.eye(4))
+
         nifti_save_path = os.path.join(out_path, f"{patient_id}_0002.nii.gz")
         nib.save(new_img, nifti_save_path)
 
