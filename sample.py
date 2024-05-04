@@ -195,23 +195,27 @@ if __name__ == '__main__':
 
             x_start = torch.randn((adc_tensor.repeat(1, 3, 1, 1)).shape, device=device)  
 
-            with torch.no_grad():
+            try:
+                with torch.no_grad():
+                    sample = sample_fn(x_start=x_start, record=True, I=adc_tensor, V=zmap_tensor, save_root=out_path, img_index=patient_id, lamb=0.5, rho=0.001)
+                sample = sample.cpu().squeeze().numpy()
+                patient_slices.append(sample)
+            except RuntimeError as e:
+                logger.error(f"Error processing slice for patient {patient_id}: {e}")
 
-                sample = sample_fn(x_start=x_start, record=True, I=adc_tensor, V=zmap_tensor, save_root=out_path, img_index=patient_id, lamb=0.5, rho=0.001)
-
-            sample = sample.cpu().squeeze().numpy()  # Ensure it's 2D
-            patient_slices.append(sample)
             print(f"Appending slice for patient {patient_id}, current slice count: {len(patient_slices) + 1}")
+        if patient_slices:
+            # Convert list of slices into a 3D numpy array
+            patient_volume = np.stack(patient_slices, axis=0)
+            patient_volume = patient_volume[:, 0, :, :]  # Select the first modality, now shape is (55, 128, 128)
+            patient_volume = patient_volume.transpose(1, 2, 0)  # Now shape should be (128, 128, 55)
 
-        # Convert list of slices into a 3D numpy array
-        patient_volume = np.stack(patient_slices, axis=0)
-        patient_volume = patient_volume[:, 0, :, :]  # Select the first modality, now shape is (55, 128, 128)
-        patient_volume = patient_volume.transpose(1, 2, 0)  # Now shape should be (128, 128, 55)
+            # Create a new NIfTI image from this array
+            new_img = nib.Nifti1Image(patient_volume, affine=np.eye(4))
 
-        # Create a new NIfTI image from this array
-        new_img = nib.Nifti1Image(patient_volume, affine=np.eye(4))
+            nifti_save_path = os.path.join(out_path, f"{patient_id}_0002.nii.gz")
+            nib.save(new_img, nifti_save_path)
 
-        nifti_save_path = os.path.join(out_path, f"{patient_id}_0002.nii.gz")
-        nib.save(new_img, nifti_save_path)
-
-        logger.info(f"Saved NIfTI file for {patient_id} at {nifti_save_path}")
+            logger.info(f"Saved NIfTI file for {patient_id} at {nifti_save_path}")
+        else:
+            logger.info(f"No valid slices processed for patient {patient_id}")
